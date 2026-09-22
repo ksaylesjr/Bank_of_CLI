@@ -1,0 +1,8 @@
+package com.kenya.persistence;
+
+import com.kenya.domain.Account;
+
+public interface AccountDAO {
+    int createAccount(Account account);              // returns generated account_id
+    Account getAccountByAccountId(int accountId);    // login step 1, and every balance operation
+}
