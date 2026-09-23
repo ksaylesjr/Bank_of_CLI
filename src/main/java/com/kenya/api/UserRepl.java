@@ -1,5 +1,7 @@
 package com.kenya.api;
 
+import com.kenya.domain.Account;
+import com.kenya.service.AccountService;
 import com.kenya.service.LoginResult;
 import com.kenya.service.UserService;
 
@@ -8,13 +10,14 @@ import java.util.Scanner;
 public class UserRepl {
 
     //global variables
-    private final Scanner sc = new Scanner(System.in);
     private final UserService userService;
+    private final AccountService accountService;   // new
     private final Session session = new Session();
+    private final Scanner sc = new Scanner(System.in);
 
-    //constructor to initialize UserRepl objects
-    UserRepl(UserService userService){
+    UserRepl(UserService userService, AccountService accountService) {
         this.userService = userService;
+        this.accountService = accountService;
     }
 
     public void run() {
@@ -58,12 +61,12 @@ public class UserRepl {
     private void handleLoggedIn(String command) {
         switch (command) {
             case "help" -> getHelp();
-            // case "balance" -> checkBalance();
+            case "balance" -> checkBalance();
             // case "deposit" -> deposit();
             // case "withdraw" -> withdraw();
             // case "transfer" -> transfer();
             // case "history" -> history();
-            // case "logout" -> session.logout();
+            case "logout" -> session.logout();
             default -> System.out.println("Unknown command. Type \"help\" for options.");
         }
     }
@@ -88,6 +91,12 @@ public class UserRepl {
         session.login(result.getUser(), result.getAccount());
 
         System.out.println("Welcome, " + result.getUser().getName() + "!");
+    }
+
+    private void checkBalance() {
+        int accountId = session.getActiveAccount().getAccountId();   // the session knows which account, so we getAccountId by digging two levels deep
+        Account account = accountService.getAccount(accountId);      // fetch its current state from the DB, session currently holds stale value from login
+        System.out.println("Current balance: $" + account.getBalance());
     }
 
 }

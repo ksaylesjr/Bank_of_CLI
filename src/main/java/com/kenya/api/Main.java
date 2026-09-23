@@ -7,7 +7,10 @@ public class Main {
     public static void main(String[] args) {
         UserDAO userDAO = new UserDAOImpl();
         AccountDAO accountDAO = new AccountDAOImpl();
+
         UserService userService = new UserServiceImpl(userDAO, accountDAO);
-        new UserRepl(userService).run();
+        AccountService accountService = new AccountServiceImpl(accountDAO);
+
+        new UserRepl(userService, accountService).run();
     }
 }
