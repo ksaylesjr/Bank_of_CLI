@@ -5,6 +5,7 @@ import com.kenya.service.AccountService;
 import com.kenya.service.LoginResult;
 import com.kenya.service.UserService;
 
+import java.math.BigDecimal;
 import java.util.Scanner;
 
 public class UserRepl {
@@ -62,7 +63,7 @@ public class UserRepl {
         switch (command) {
             case "help" -> getHelp();
             case "balance" -> checkBalance();
-            // case "deposit" -> deposit();
+            case "deposit" -> deposit();
             // case "withdraw" -> withdraw();
             // case "transfer" -> transfer();
             // case "history" -> history();
@@ -97,6 +98,16 @@ public class UserRepl {
         int accountId = session.getActiveAccount().getAccountId();   // the session knows which account, so we getAccountId by digging two levels deep
         Account account = accountService.getAccount(accountId);      // fetch its current state from the DB, session currently holds stale value from login
         System.out.println("Current balance: $" + account.getBalance());
+    }
+
+    private void deposit() {
+        System.out.print("Deposit amount: ");
+        BigDecimal amount = new BigDecimal(sc.nextLine().trim());
+
+        int accountId = session.getActiveAccount().getAccountId();
+        Account updated = accountService.deposit(accountId, amount);
+
+        System.out.println("Deposited $" + amount + ". New balance: $" + updated.getBalance());
     }
 
 }

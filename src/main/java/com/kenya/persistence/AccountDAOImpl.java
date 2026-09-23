@@ -16,6 +16,8 @@ public class AccountDAOImpl implements AccountDAO {
             "INSERT INTO account (user_id, account_type, balance) VALUES (?, ?, ?)";
     private static final String FIND_BY_ID_SQL =
             "SELECT account_id, user_id, account_type, balance FROM account WHERE account_id = ?";
+    private static final String UPDATE_BALANCE_SQL =
+            "UPDATE account SET balance = ? WHERE account_id = ?";
 
     @Override
     public int createAccount(Account account) {
@@ -66,5 +68,19 @@ public class AccountDAOImpl implements AccountDAO {
                 resultSet.getInt("user_id"),
                 resultSet.getString("account_type"),
                 resultSet.getBigDecimal("balance"));
+    }
+
+    @Override
+    public void updateBalance(int accountId, BigDecimal newBalance) {
+        try (Connection connection = ConnectionFactory.getConnectionFactory().getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_BALANCE_SQL)) {
+
+            statement.setBigDecimal(1, newBalance);   // fills the first ?, to set the newBalance
+            statement.setInt(2, accountId);           // fills the second ?, WHERE account_id = ?
+            statement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not update balance", e);
+        }
     }
 }
