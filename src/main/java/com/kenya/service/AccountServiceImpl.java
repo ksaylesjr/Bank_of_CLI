@@ -48,4 +48,33 @@ public class AccountServiceImpl implements AccountService {
         // return the updated account so the REPL can show the new balance
         return getAccount(accountId);
     }
+
+    @Override
+    public Account withdraw(int accountId, BigDecimal amount) {
+        // reject non-positive amounts, DB also has constraint CHECK (balance >= 0)
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be positive");
+        }
+
+        // fetch current state
+        Account account = getAccount(accountId);
+
+        // prevent overdraft, can't withdraw more than the available balance
+        if (account.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+
+        // compute the new balance
+        BigDecimal newBalance = account.getBalance().subtract(amount);
+
+        // first WRITE, change the money
+        accountDAO.updateBalance(accountId, newBalance);
+
+        // second WRITE, record the audit trail, withdraw: money leaves this account to outside, so dest is null
+        Transaction record = new Transaction(0, "WITHDRAW", amount, accountId, null);
+        transactionDAO.recordTransaction(record);
+
+        // return the updated account
+        return getAccount(accountId);
+    }
 }

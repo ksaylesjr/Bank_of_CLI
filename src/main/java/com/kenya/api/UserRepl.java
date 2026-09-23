@@ -64,7 +64,7 @@ public class UserRepl {
             case "help" -> getHelp();
             case "balance" -> checkBalance();
             case "deposit" -> deposit();
-            // case "withdraw" -> withdraw();
+            case "withdraw" -> withdraw();
             // case "transfer" -> transfer();
             // case "history" -> history();
             case "logout" -> session.logout();
@@ -108,6 +108,16 @@ public class UserRepl {
         Account updated = accountService.deposit(accountId, amount);
 
         System.out.println("Deposited $" + amount + ". New balance: $" + updated.getBalance());
+    }
+
+    private void withdraw() {
+        System.out.print("Amount to withdraw: ");
+        BigDecimal amount = new BigDecimal(sc.nextLine().trim());
+
+        int accountId = session.getActiveAccount().getAccountId();
+        Account updated = accountService.withdraw(accountId, amount);
+
+        System.out.println("Withdrew $" + amount + ". New balance: $" + updated.getBalance());
     }
 
 }

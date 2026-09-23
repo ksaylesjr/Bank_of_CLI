@@ -7,4 +7,5 @@ import java.math.BigDecimal;
 public interface AccountService {
     Account getAccount(int accountId);
     Account deposit(int accountId, BigDecimal amount);
+    Account withdraw(int accountId, BigDecimal amount);
 }
