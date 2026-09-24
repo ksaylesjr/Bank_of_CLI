@@ -18,6 +18,8 @@ public class AccountDAOImpl implements AccountDAO {
             "SELECT account_id, user_id, account_type, balance FROM account WHERE account_id = ?";
     private static final String UPDATE_BALANCE_SQL =
             "UPDATE account SET balance = ? WHERE account_id = ?";
+    private static final String INSERT_TRANSACTION_SQL =
+            "INSERT INTO transaction (trans_type, trans_amount, source_id, dest_id) VALUES (?, ?, ?, ?)";
 
     @Override
     public int createAccount(Account account) {
@@ -81,6 +83,65 @@ public class AccountDAOImpl implements AccountDAO {
 
         } catch (SQLException e) {
             throw new IllegalStateException("Could not update balance", e);
+        }
+    }
+
+    // this method applies atomicity for each transaction
+    @Override
+    public void transfer(int sourceId, int destId, BigDecimal amount,
+                         BigDecimal newSourceBalance, BigDecimal newDestBalance) {
+        Connection connection = null;   // not using try with resources because of atomicity, conn closes in catch block
+        try {
+            connection = ConnectionFactory.getConnectionFactory().getConnection();
+            connection.setAutoCommit(false);   // transaction writes won't be permanent until commit()
+
+            // first WRITE, debit the source
+            try (PreparedStatement debit = connection.prepareStatement(UPDATE_BALANCE_SQL)) {
+                debit.setBigDecimal(1, newSourceBalance);
+                debit.setInt(2, sourceId);
+                debit.executeUpdate();
+            }
+
+
+            // second WRITE, credit the destination
+            try (PreparedStatement credit = connection.prepareStatement(UPDATE_BALANCE_SQL)) {
+                credit.setBigDecimal(1, newDestBalance);
+                credit.setInt(2, destId);
+                credit.executeUpdate();
+            }
+
+            // third WRITE, record the audit trail, transfer has a source AND dest
+            try (PreparedStatement record = connection.prepareStatement(INSERT_TRANSACTION_SQL)) {
+                record.setString(1, "TRANSFER");
+                record.setBigDecimal(2, amount);
+                record.setInt(3, sourceId);
+                record.setInt(4, destId);
+                record.executeUpdate();
+            }
+
+            connection.commit();   // If all three succeed, make them permanent, together
+
+        } catch (SQLException e) {
+            // if at least one fails, undo everything as if none of it happened
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackEx) {
+                    throw new IllegalStateException("Transfer failed and rollback also failed", rollbackEx);
+                }
+            }
+            throw new IllegalStateException("Transfer failed and was rolled back", e);
+
+        } finally {
+            // restore normal mode and close, no matter what happened
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                } catch (SQLException closeEx) {
+                    // nothing more we can do, close the connection
+                }
+            }
         }
     }
 }

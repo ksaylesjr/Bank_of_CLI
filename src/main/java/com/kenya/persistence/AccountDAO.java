@@ -7,4 +7,6 @@ public interface AccountDAO {
     int createAccount(Account account);              // returns generated account_id
     Account getAccountByAccountId(int accountId);    // login step 1, and every balance operation
     void updateBalance(int accountId, BigDecimal newBalance);
+    void transfer(int sourceId, int destId, BigDecimal amount,
+                  BigDecimal newSourceBalance, BigDecimal newDestBalance);
 }

@@ -6,6 +6,7 @@ import com.kenya.persistence.AccountDAO;
 import com.kenya.persistence.TransactionDAO;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class AccountServiceImpl implements AccountService {
     private final AccountDAO accountDAO;
@@ -42,7 +43,7 @@ public class AccountServiceImpl implements AccountService {
         accountDAO.updateBalance(accountId, newBalance);
 
         // second WRITE, record the transaction for ledger, deposit: money comes from outside source, so source is null
-        Transaction record = new Transaction(0, "DEPOSIT", amount, null, accountId);
+        Transaction record = new Transaction(0, "DEPOSIT", amount, null, null, accountId);
         transactionDAO.recordTransaction(record);
 
         // return the updated account so the REPL can show the new balance
@@ -71,10 +72,44 @@ public class AccountServiceImpl implements AccountService {
         accountDAO.updateBalance(accountId, newBalance);
 
         // second WRITE, record the audit trail, withdraw: money leaves this account to outside, so dest is null
-        Transaction record = new Transaction(0, "WITHDRAW", amount, accountId, null);
+        Transaction record = new Transaction(0, "WITHDRAW", amount, null, accountId, null);
         transactionDAO.recordTransaction(record);
 
         // return the updated account
         return getAccount(accountId);
+    }
+
+    @Override
+    public void transfer(int sourceId, int destId, BigDecimal amount) {
+        // first rule, positive amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Transfer amount must be positive");
+        }
+
+        // second rule, can't transfer to the same account
+        if (sourceId == destId) {
+            throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+
+        // fetch both accounts, getAccount throws if either doesn't exist
+        Account source = getAccount(sourceId);
+        Account dest = getAccount(destId);
+
+        // third rule, must have sufficient funds in the source
+        if (source.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+
+        // compute both new balances
+        BigDecimal newSourceBalance = source.getBalance().subtract(amount);
+        BigDecimal newDestBalance = dest.getBalance().add(amount);
+
+        // hand the pre-computed values to the DAO, which does all three writes atomically
+        accountDAO.transfer(sourceId, destId, amount, newSourceBalance, newDestBalance);
+    }
+
+    @Override
+    public List<Transaction> getHistory(int accountId) {
+        return transactionDAO.getTransactionsForAccount(accountId);
     }
 }

@@ -1,12 +1,16 @@
 package com.kenya.api;
 
 import com.kenya.domain.Account;
+import com.kenya.domain.Transaction;
 import com.kenya.service.AccountService;
 import com.kenya.service.LoginResult;
 import com.kenya.service.UserService;
+import com.kenya.domain.User;
+import java.time.LocalDate;
 
 import java.math.BigDecimal;
-import java.util.Scanner;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class UserRepl {
 
@@ -22,6 +26,7 @@ public class UserRepl {
     }
 
     public void run() {
+        printWelcome();
         while (true) {
             System.out.println("> ");
             String input = sc.nextLine().trim();
@@ -33,11 +38,23 @@ public class UserRepl {
 
             // error handling for users input command
             try {
-                handle(command);    //helper method to structure logic
+                handle(command);
             } catch (IllegalArgumentException e) {
+                // user error — show them exactly what they did wrong
                 System.out.println("Error: " + e.getMessage());
+            } catch (IllegalStateException e) {
+                // system error — friendly message, don't leak technical details and display a scary message to the user
+                System.out.println("Service temporarily unavailable. Please try again.");
             }
         }
+    }
+
+    private void printWelcome() {
+        System.out.println("=================================");
+        System.out.println("   Welcome to the Bank of CLI");
+        System.out.println("=================================");
+        getHelp();
+        System.out.println();
     }
 
     // router to display menu dependent on session state
@@ -53,7 +70,7 @@ public class UserRepl {
         switch (command) {
             case "help" -> getHelp();
             case "login" -> login();
-            // case "register" -> userService.registerUser(readUser());
+            case "register" -> register();
             default -> System.out.println("Please log in or register first. Type \"help\" for options.");
         }
     }
@@ -65,8 +82,8 @@ public class UserRepl {
             case "balance" -> checkBalance();
             case "deposit" -> deposit();
             case "withdraw" -> withdraw();
-            // case "transfer" -> transfer();
-            // case "history" -> history();
+            case "transfer" -> transfer();
+            case "history" -> history();
             case "logout" -> session.logout();
             default -> System.out.println("Unknown command. Type \"help\" for options.");
         }
@@ -75,7 +92,7 @@ public class UserRepl {
     public void getHelp() {
         if (!session.isLoggedIn()) {
             System.out.println("If you are a member, please input \"login\"\n" +
-                    "if you would like to register, please input \"register\"\n");
+                    "If you would like to register, please input \"register\"\n");
         } else {
             System.out.println("Commands: balance, deposit, withdraw, transfer, history, logout\n");
         }
@@ -92,6 +109,7 @@ public class UserRepl {
         session.login(result.getUser(), result.getAccount());
 
         System.out.println("Welcome, " + result.getUser().getName() + "!");
+        getHelp();
     }
 
     private void checkBalance() {
@@ -118,6 +136,58 @@ public class UserRepl {
         Account updated = accountService.withdraw(accountId, amount);
 
         System.out.println("Withdrew $" + amount + ". New balance: $" + updated.getBalance());
+    }
+
+    private void transfer() {
+        int sourceId = session.getActiveAccount().getAccountId();   // from = the logged-in account
+
+        System.out.print("Destination account ID: ");
+        int destId = Integer.parseInt(sc.nextLine().trim());
+
+        System.out.print("Amount to transfer: ");
+        BigDecimal amount = new BigDecimal(sc.nextLine().trim());
+
+        accountService.transfer(sourceId, destId, amount);
+        System.out.println("Transferred $" + amount + " to account " + destId + ".");
+    }
+
+    private void history() {
+        int accountId = session.getActiveAccount().getAccountId();
+        List<Transaction> transactions = accountService.getHistory(accountId);
+
+        if (transactions.isEmpty()) {
+            System.out.println("No transactions yet.");
+            return;
+        }
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        System.out.println("Transaction history:");
+        for (Transaction t : transactions) {
+            System.out.println("  " + t.getTransDate().format(fmt)
+                    + "  " + t.getTransType()
+                    + " $" + t.getTransAmount()
+                    + "  (from: " + t.getSourceId() + ", to: " + t.getDestId() + ")");
+        }
+    }
+
+    private User readUser() {
+        System.out.print("Name: ");
+        String name = sc.nextLine().trim();
+
+        System.out.print("PIN: ");
+        String pin = sc.nextLine().trim();
+
+        System.out.print("Date of birth (YYYY-MM-DD): ");
+        LocalDate dob = LocalDate.parse(sc.nextLine().trim());
+
+        return new User(0, name, pin, dob);   // userId 0, the DB generates the real one to return
+    }
+
+    private void register() {
+        User user = readUser();
+        int accountId = userService.registerUser(user);
+        System.out.println("Registered! Your account ID is " + accountId + ". Please log in.");
     }
 
 }
