@@ -28,7 +28,7 @@ public class UserRepl {
     public void run() {
         printWelcome();
         while (true) {
-            System.out.println("> ");
+            System.out.print("> ");
             String input = sc.nextLine().trim();
             String command = input.toLowerCase();
 

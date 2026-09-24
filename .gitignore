@@ -41,3 +41,6 @@ src/main/resources/db.properties
 
 # IntelliJ project files
 .idea/
+
+# log output
+bank.log
