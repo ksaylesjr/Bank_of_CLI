@@ -84,14 +84,15 @@ public class UserRepl {
             case "withdraw" -> withdraw();
             case "transfer" -> transfer();
             case "history" -> history();
-            case "logout" -> session.logout();
+            case "logout" -> logout();
+
             default -> System.out.println("Unknown command. Type \"help\" for options.");
         }
     }
 
     public void getHelp() {
         if (!session.isLoggedIn()) {
-            System.out.println("If you are a member, please input \"login\"\n" +
+            System.out.print("If you are a member, please input \"login\"\n" +
                     "If you would like to register, please input \"register\"\n");
         } else {
             System.out.println("Commands: balance, deposit, withdraw, transfer, history, logout\n");
@@ -110,6 +111,11 @@ public class UserRepl {
 
         System.out.println("Welcome, " + result.getUser().getName() + "!");
         getHelp();
+    }
+
+    private void logout() {
+        session.logout();
+        System.out.println("You have been logged out.");
     }
 
     private void checkBalance() {
